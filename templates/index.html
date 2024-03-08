@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Audio Recorder</title>
+
+    <style>
+
+        body {
+
+            font-family: Arial, sans-serif;
+
+            background-color: #f8f9fa;
+
+            margin: 0;
+
+            padding: 0;
+
+            display: flex;
+
+            justify-content: center;  /* Centers container horizontally */
+
+            align-items: center;      /* Centers container vertically */
+
+            height: 100vh;
+
+            background-image: url('https://img.freepik.com/free-vector/network-mesh-wire-digital-technology-background_1017-27428.jpg?t=st=1709913346~exp=1709916946~hmac=a787936926213718035c3cd2d6757768f68c0d1f25173429ff156d1eb616d7c0&w=1380');
+
+            background-position: center;
+
+            background-repeat: no-repeat;
+
+            background-size: cover;
+
+        }
+
+
+        .container {
+
+            display: flex;
+
+            flex-direction: column;
+
+            align-items: flex-end;  /* Aligns buttons to the right */
+
+        }
+
+
+        button {
+
+            width: 300px;
+
+            margin: 10px;  /* Adjust spacing between buttons */
+
+            padding: 20px 40px;  /* Increase button size */
+
+            background-color: #007bff;
+
+            color: #fff;
+
+            border: none;
+
+            border-radius: 5px;
+
+            cursor: pointer;
+
+            transition: background-color 0.3s ease;
+
+            font-size: 18px;  /* Increase font size for bigger buttons */
+
+        }
+
+
+        button:hover {
+
+            background-color: #0056b3;
+
+        }
+
+
+        div {
+            margin-top: 20px;
+        }
+
+
+    </style>
+
+</head>
+<body>
+    <div class="container">
+        <button id="start">Start Recording</button>
+        <button id="stop">Stop Recording</button>
+        <button id="play">Play Recorded Audio</button>
+        <button id="modify">Play Modified Audio</button>
+    </div>
+
+    <script>
+        const startButton = document.getElementById('start');
+        const stopButton = document.getElementById('stop');
+        const playButton = document.getElementById('play');
+        const modifyButton = document.getElementById('modify');
+
+        let audioRecorder;
+        let audioChunks = [];
+
+        navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(stream => {
+                audioRecorder = new MediaRecorder(stream);
+                audioRecorder.addEventListener('dataavailable', e => {
+                    audioChunks.push(e.data);
+                });
+
+                startButton.addEventListener('click', () => {
+                    audioChunks = [];
+                    audioRecorder.start();
+                });
+
+                stopButton.addEventListener('click', () => {
+                    audioRecorder.stop();
+                });
+
+                playButton.addEventListener('click', () => {
+                    const blobObj = new Blob(audioChunks, { type: 'audio/webm' });
+                    const audioUrl = URL.createObjectURL(blobObj);
+                    const audio = new Audio(audioUrl);
+                    audio.play();
+                });
+
+                modifyButton.addEventListener('click', () => {
+                const blobObj = new Blob(audioChunks, { type: 'audio/webm' });
+                const formData = new FormData();
+                formData.append('audio', blobObj, 'recording.webm');
+
+                fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        // Play the uploaded audio after successful upload
+                        return fetch('/audio');  // Assuming the uploaded audio is served at /audio route
+                    })
+                    .then(response => response.blob())  // Get the audio blob from the response
+                    .then(audioBlob => {
+                        const audioUrl = URL.createObjectURL(audioBlob);
+                        const audio = new Audio(audioUrl);
+                        audio.play();
+                    })
+                    .catch(error => {
+                        console.error('There was an error!', error);
+                    });
+            });
+
+            }).catch(err => {
+                console.log('Error: ' + err);
+            });
+    </script>
+</body>
+</html>
